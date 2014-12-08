@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>El Café</title>
+<style>
+body {
+    background: #222;
+    color: #ddd;
+    font: 13px/15px "Courier New", Courier, monospace;
+    margin: 0;
+}
+header {
+    background: #111;
+    padding: 6px 10px 7px 10px;
+}
+input {
+    background: inherit;
+    border: 0;
+    width: 100%;
+}
+input:focus {
+    border: 0;
+    box-shadow: 0;
+    color: #2ecc71;
+    font: 13px/16px "Courier New", Courier, monospace;
+    outline: none;
+}
+main { overflow-y: auto; }
+.circle {
+    border-radius: 50%;
+    display: inline-block;
+    height: 12px;
+    margin-right: 5px;
+    width: 12px;
+}
+#messages {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+#messages li {
+    padding: 7px 10px;
+    vertical-align: top;
+    word-wrap: break-word;
+}
+#messages li:nth-child(odd) { background: #1c1c1c; }
+footer {
+    color: #777;
+    padding: 7px 12px;
+}
+</style>
+<script src="js/angular.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/angular-socket.js"></script>
+<script>
+var app = angular.module("example", ["socket.io"]);
+
+app.config(function($socketProvider) {
+    $socketProvider.setConnectionUrl("http://localhost:3000");
+});
+
+app.controller("Ctrl", function($scope, $socket) {
+    $scope.height = (window.innerHeight.toString() - 60) + "px";
+    $scope.messages = [];
+    $scope.newMessage = "";
+    $scope.userCount = 0;
+
+    //
+    $scope.createMessage = function() {
+        if ($scope.newMessage.length > 0) {
+            var msg = {
+                author: $scope.color,
+                body: $scope.newMessage
+            };
+            $socket.emit("new message", msg.body);
+            $scope.messages.push(msg);
+            $scope.newMessage = "";
+        }
+    };
+
+    //
+    $socket.on("new message", function(data) {
+        $scope.messages.push(data);
+    });
+
+    //
+    $socket.on("user count", function(data) {
+        $scope.userCount = data - 1;
+    });
+
+    $socket.on("welcome", function(data) {
+        $scope.color = data;
+    });
+});
+
+//
+app.filter("reverse", function() {
+    return function(items) {
+        return items.slice().reverse();
+    };
+});
+</script>
+</head>
+<body ng-app="example">
+    <div ng-controller="Ctrl" id="wrapper">
+        <header>
+            <input ng-keyup="$event.keyCode == 13 ? createMessage() : null" ng-model="newMessage" autofocus>
+        </header>
+        <main ng-style="{ 'height': height, 'max-height': height }">
+            <ul id="messages">
+                <li ng-repeat="message in messages | reverse track by $index">
+                    <div class="circle" ng-style="{ 'background': message.author }"></div>
+                    {{ message.body }}
+                </li>
+            </ul>
+        </main>
+        <footer>Users: {{ userCount }}</footer>
+    </div>
+</body>
+</html>
